@@ -1,3 +1,8 @@
+var chessColor = {
+    black: true,
+    white: false
+}
+
 class AI {
     // public
     /* 构造函数 */
@@ -25,26 +30,23 @@ class AI {
             [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
         ];
         this.next = [ [1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1] ];
-
     }
 
     /* 评估本次落子得分 */
     evaluate(position, color) {
-        var situation = [0, 0, 0, 0, 0, 0, 0, 0];
         var v = this.board[position.x][position.y];
         for (var i = 0; i < 4; i ++){
             var s = ["", ""];
             for (var j = 0; j < 2; j ++) {
-                var tx = position.x;
-                var ty = position.y;
+                var tmpPosition = {...position};
                 while(true) {
                     if (s[j].length >= 4) break;
-                    tx += this.next[i*2+j][0];
-                    ty += this.next[i*2+j][1];
-                    if (this.inGrid(tx, ty)){
-                        if (this.grid[tx][ty] === undefined){
+                    tmpPosition.x += this.next[i*2+j][0];
+                    tmpPosition.y += this.next[i*2+j][1];
+                    if (this.inGrid(tmpPosition)){
+                        if (this.grid[tmpPosition.x][tmpPosition.y] === undefined){
                             s[j] += "_";
-                        }else if (this.grid[tx][ty] == color){
+                        }else if (this.grid[tmpPosition.x][tmpPosition.y] == color){
                             s[j] += "O";
                         }else{
                             s[j] += "H";
@@ -58,93 +60,134 @@ class AI {
             var result = this._stringReverse(s[0]) + "O" + s[1];
             var v1 = this._analysis(result);
             var v2 = this._analysis(this._stringReverse(result));
-            ++ situation[Math.min(v1, v2)];
-        }
 
-        v += situation[0] * 10000000;
-        v += situation[1] * 1000000;
-        v += situation[2] * 100000;
-        v += situation[3] * 10000;
-        v += situation[4] * 1000;
-        v += situation[5] * 100;
-        v += situation[6] * 10;
+            v += Math.max(v1, v2);
+        }
 
         return v;
     }
 
-    /* 读取棋盘数据 0为黑 1为白 */
-    gridRead(grid) {
-        this.size = grid.length;
-        this.grid = grid;
-    }
-
     /* 该坐标是否在棋盘内 */
-    inGrid(x, y) {
-        return x >= 0 && x < this.size && y >= 0 && y < this.size;
+    inGrid(position) {
+        return position.x >= 0 && position.x < this.size && position.y >= 0 && position.y < this.size;
     }
 
     /* 放置棋子 返回是否放置成功 */
-    placeAt(x, y, color) {
+    placeAt(position, color) {
         /* 判断坐标是否出界, 判断该坐标上是否有棋子 */
-        if (this.inGrid(x, y) && this.grid[x][y] === undefined){
-            this.grid[x][y] = color;
+        if (this.inGrid(position) && this.grid[position.x][position.y] === undefined){
+            this.grid[position.x][position.y] = color;
             return true;
         }
         return false;
     }
 
+    /* 该点附近有棋子 */
+    chessClosed(position) {
+        for (var i = 0; i < 4; i ++) {
+            for (var j = 0; j < 2; j ++) {
+                var tmpPosition = {...position};
+                for (var k = 0; k < 3; k ++){
+                    tmpPosition.x += this.next[i*2+j][0];
+                    tmpPosition.y += this.next[i*2+j][1];
+                    if (this.inGrid(tmpPosition) && this.grid[tmpPosition.x][tmpPosition.y] !== undefined){
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     /* 测试落子 */
-    randomAvailablePosition() {
-        var result = {x: 0, y: 0};
-        var v = -100000000;
+    thinkDeeply(depth, color) {
+        return this._abMax(depth, 0, color, -Infinity, Infinity).position;
+    }
+
+    // private
+
+    /* ab剪枝 */
+    _abMax(depth, value, color, alpha, beta) {
+        if (depth == 0) {
+            return {position:{x:0, y:0}, v: value};
+        }
+        var result = {position:{x:0, y:0}, v: 0};
         for (var i = 0; i < this.size; i++) {
             for (var j = 0; j < this.size; j++) {
-                if (this.grid[i][j] === undefined) {
-                    var tmp = this.evaluate({x: i, y: j}, 0);
-                    if (tmp > v){
-                        result = {x: i, y: j};
-                        v = tmp;
+                var chess = {x:i, y:j};
+                if (this.grid[i][j] === undefined && this.chessClosed(chess)) {
+                    this.grid[i][j] = color;
+                    var tmp = this._abMin(depth-1, value + this.evaluate(chess, color), !color, alpha, beta);
+                    if (tmp.v > alpha){
+                        alpha = tmp.v;
+                        result = {position: chess, v: alpha};
                     }
+                    if (beta <= alpha){
+                        this.grid[i][j] = undefined;
+                        return {position: chess, v: alpha};
+                    }
+                    this.grid[i][j] = undefined;
                 }
             }
         }
         return result;
     }
-
-    // private
+    
+    _abMin(depth, value, color, alpha, beta) {
+        var result = {position:{x:0, y:0}, v: 0};
+        for (var i = 0; i < this.size; i++) {
+            for (var j = 0; j < this.size; j++) {
+                var chess = {x:i, y:j};
+                if (this.grid[i][j] === undefined && this.chessClosed(chess)) {
+                    this.grid[i][j] = color;
+                    var tmp = this._abMax(depth-1, value - this.evaluate(chess, color), !color, alpha, beta);
+                    if (tmp.v < beta){
+                        beta = tmp.v;
+                        result = {position: chess, v: beta};
+                    }
+                    if (beta <= alpha){
+                        this.grid[i][j] = undefined;
+                        return {position: chess, v: beta};
+                    }
+                    this.grid[i][j] = undefined;
+                }
+            }
+        }
+        return result;
+    }
     /* 判断当前情况 */
     _analysis(str = "") {
         /* 长连 */
-        if(str.indexOf("OOOOO") != -1) return 0;
+        if(str.indexOf("OOOOO") != -1) return 1000000;
         /* 活四 */
-        if(str.indexOf("_OOOO_") != -1) return 1;
-        if(str.indexOf("O_OOO_O") != -1) return 1;
+        if(str.indexOf("_OOOO_") != -1) return 100000;
+        if(str.indexOf("O_OOO_O") != -1) return 100000;
         /* 冲四 */
-        if (str.indexOf("OOO_O") != -1) return 2;
-        if (str.indexOf("_OOOOH") != -1) return 2;
-        if (str.indexOf("OO_OO") != -1) return 2;
+        if (str.indexOf("OOO_O") != -1) return 10000;
+        if (str.indexOf("_OOOOH") != -1) return 10000;
+        if (str.indexOf("OO_OO") != -1) return 10000;
         /* 活三 */
-        if (str.indexOf("__OOO_") != -1) return 3;
-        if (str.indexOf("_OO_O_") != -1) return 3;
+        if (str.indexOf("__OOO_") != -1) return 10000;
+        if (str.indexOf("_OO_O_") != -1) return 10000;
         /* 眠三 */
-        if (str.indexOf("__OOOH") != -1) return 4;
-        if (str.indexOf("_O_OOH") != -1) return 4;
-        if (str.indexOf("_OO_OH") != -1) return 4;
-        if (str.indexOf("O__OO") != -1) return 4;
-        if (str.indexOf("O_O_O") != -1) return 4;
-        if (str.indexOf("H_OOO_H") != -1) return 4;
+        if (str.indexOf("__OOOH") != -1) return 1050;
+        if (str.indexOf("_O_OOH") != -1) return 1050;
+        if (str.indexOf("_OO_OH") != -1) return 1050;
+        if (str.indexOf("O__OO") != -1) return 1020;
+        if (str.indexOf("O_O_O") != -1) return 1010;
+        if (str.indexOf("H_OOO_H") != -1) return 1000;
         /* 活二 */
-        if (str.indexOf("__OO__") != -1) return 5;
-        if (str.indexOf("__O_O_") != -1) return 5;
-        if (str.indexOf("_O__O_") != -1) return 5;
-        if (str.indexOf("___OO_") != -1) return 5;
+        if (str.indexOf("__OO__") != -1) return 105;
+        if (str.indexOf("___OO_") != -1) return 105;
+        if (str.indexOf("__O_O_") != -1) return 102;
+        if (str.indexOf("_O__O_") != -1) return 100;
         /* 眠二 */
-        if (str.indexOf("___OOH") != -1) return 6;
-        if (str.indexOf("__O_OH") != -1) return 6;
-        if (str.indexOf("_O__OH") != -1) return 6;
-        if (str.indexOf("H_O_O_H") != -1) return 6;
+        if (str.indexOf("___OOH") != -1) return 11;
+        if (str.indexOf("__O_OH") != -1) return 10;
+        if (str.indexOf("_O__OH") != -1) return 9;
+        if (str.indexOf("H_O_O_H") != -1) return 8;
         if (str.indexOf("H_OO__H") != -1) return 6;
-        return 7;
+        return 0;
     }
 
     _stringReverse(str) {
@@ -176,13 +219,13 @@ process.stdin.on('data', function(chunk) {
 process.stdin.on('end', function() { 
     var input = JSON.parse(fullInput);
     for (var i = input.requests.length - 1; i >= 0; i--) {
-        ai.placeAt(input.requests[i].x, input.requests[i].y, 1);
+        ai.placeAt({x: input.requests[i].x, y: input.requests[i].y}, chessColor.white);
     }
     for (var i = input.responses.length - 1; i >= 0; i--) {
-        ai.placeAt(input.responses[i].x, input.responses[i].y, 0);
+        ai.placeAt({x: input.responses[i].x, y: input.responses[i].y}, chessColor.black);
     }
     var output = {
-        response: ai.randomAvailablePosition()
+        response: ai.thinkDeeply(4, chessColor.black)
     };
     console.log(JSON.stringify(output));
 });
