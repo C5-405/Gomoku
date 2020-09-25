@@ -32,6 +32,25 @@ class AI {
         this.next = [ [1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1] ];
     }
 
+    findChessPlace(bestK, color) {
+        var list = [];
+        for (var i = 0; i < this.size; ++ i) {
+            for (var j = 0; j < this.size; ++ j) {
+                if (this.grid[i][j] === undefined) {
+                    list.push({position:{x: i, y:j}, v: this.evaluate({x: i, y: j}, color)});
+                }
+            }
+        }
+        list.sort(function(a, b) {
+            return b.v - a.v;
+        });
+        var result = [];
+        for (var i = 0; i < bestK; ++ i) {
+            result.push(list[i]);
+        }
+        return result;
+    }
+
     /* 评估本次落子得分 */
     evaluate(position, color) {
         var v = this.board[position.x][position.y];
@@ -82,23 +101,6 @@ class AI {
         return false;
     }
 
-    /* 该点附近有棋子 */
-    chessClosed(position) {
-        for (var i = 0; i < 4; i ++) {
-            for (var j = 0; j < 2; j ++) {
-                var tmpPosition = {...position};
-                for (var k = 0; k < 3; k ++){
-                    tmpPosition.x += this.next[i*2+j][0];
-                    tmpPosition.y += this.next[i*2+j][1];
-                    if (this.inGrid(tmpPosition) && this.grid[tmpPosition.x][tmpPosition.y] !== undefined){
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
     /* 测试落子 */
     thinkDeeply(depth, color) {
         return this._abMax(depth, 0, color, -Infinity, Infinity).position;
@@ -112,46 +114,44 @@ class AI {
             return {position:{x:0, y:0}, v: value};
         }
         var result = {position:{x:0, y:0}, v: 0};
-        for (var i = 0; i < this.size; i++) {
-            for (var j = 0; j < this.size; j++) {
-                var chess = {x:i, y:j};
-                if (this.grid[i][j] === undefined && this.chessClosed(chess)) {
-                    this.grid[i][j] = color;
-                    var tmp = this._abMin(depth-1, value + this.evaluate(chess, color), !color, alpha, beta);
-                    if (tmp.v > alpha){
-                        alpha = tmp.v;
-                        result = {position: chess, v: alpha};
-                    }
-                    if (beta <= alpha){
-                        this.grid[i][j] = undefined;
-                        return {position: chess, v: alpha};
-                    }
-                    this.grid[i][j] = undefined;
-                }
+        var list = this.findChessPlace(10, color);
+        for (var i = 0; i < list.length; i ++) {
+            var x = list[i].position.x;
+            var y = list[i].position.y;
+            var v = list[i].v;
+            this.grid[x][y] = color;
+            var tmp = this._abMin(depth-1, value + v, !color, alpha, beta);
+            if (tmp.v > alpha){
+                alpha = tmp.v;
+                result = {position: {x: x, y: y}, v: alpha};
             }
+            if (beta <= alpha){
+                this.grid[x][y] = undefined;
+                return {position: {x: x, y: y}, v: alpha};
+            }
+            this.grid[x][y] = undefined;
         }
         return result;
     }
     
     _abMin(depth, value, color, alpha, beta) {
         var result = {position:{x:0, y:0}, v: 0};
-        for (var i = 0; i < this.size; i++) {
-            for (var j = 0; j < this.size; j++) {
-                var chess = {x:i, y:j};
-                if (this.grid[i][j] === undefined && this.chessClosed(chess)) {
-                    this.grid[i][j] = color;
-                    var tmp = this._abMax(depth-1, value - this.evaluate(chess, color), !color, alpha, beta);
-                    if (tmp.v < beta){
-                        beta = tmp.v;
-                        result = {position: chess, v: beta};
-                    }
-                    if (beta <= alpha){
-                        this.grid[i][j] = undefined;
-                        return {position: chess, v: beta};
-                    }
-                    this.grid[i][j] = undefined;
-                }
+        var list = this.findChessPlace(10, color);
+        for (var i = 0; i < list.length; i ++) {
+            var x = list[i].position.x;
+            var y = list[i].position.y;
+            var v = list[i].v;
+            this.grid[x][y] = color;
+            var tmp = this._abMax(depth-1, value - v, !color, alpha, beta);
+            if (tmp.v < beta){
+                beta = tmp.v;
+                result = {position: {x: x, y: y}, v: beta};
             }
+            if (beta <= alpha){
+                this.grid[x][y] = undefined;
+                return {position: {x: x, y: y}, v: beta};
+            }
+            this.grid[x][y] = undefined;
         }
         return result;
     }
@@ -225,7 +225,7 @@ process.stdin.on('end', function() {
         ai.placeAt({x: input.responses[i].x, y: input.responses[i].y}, chessColor.black);
     }
     var output = {
-        response: ai.thinkDeeply(4, chessColor.black)
+        response: ai.thinkDeeply(6, chessColor.black)
     };
     console.log(JSON.stringify(output));
 });
