@@ -3,16 +3,69 @@
 
 <head>
     <meta charset="utf-8" />
-    <title></title>
+    <title>五子棋</title>
     <script src="jq.js"></script>
     <script src="../ai/AI.js"></script>
     <script src="wuziqi.js"></script>
+    <style>
+        .container {
+            width: 945px;
+            height: 500px;
+            margin: 0 auto;
+        }
+        p{
+            text-align: center;
+        }
+        .container_top {
+            text-align: center;
+        }
+
+        .container div {
+            margin-right: 20px;
+            float: left;
+        }
+ 
+        .container_left {
+            width: 200px;
+            height: 500px;
+            
+        }
+
+        .container_center {
+            width: 500px;
+            height: 500px;
+            border: 1px solid black;
+          
+        }
+
+        .container .container_right {
+            width: 200px;
+            height: 500px;
+            margin-right: 0px;
+        }
+    </style>
 </head>
 
 <body>
+    <div class="container_top">
+        <h1>五子棋</h1>
+    </div>
+    <div class="container">
+        <div class="container_left">
+          <p id="myname">myName:</p></br>
+          <p id="myHonor">myHonor:</p><br>
+          <p id="thinkingTime">thinkingTime:</p>
+        </div>
+        <div class="container_center">
+            <canvas id="can" width="496" height="496" style="background:url(qipan.jpg)"></canvas>
+        </div>
 
-    <canvas id="can" width="496" height="496" style="background:url(qipan.jpg)"></canvas>
-
+        <div class="container_right">
+            <p id="opponentName">opponentName:</p></br>
+            <p id="opponetHonor">opponetHonor:</p></br>
+            <p id="thinkingTime">thinkingTime:</p>
+        </div>
+    </div>
 </body>
 
 </html>
