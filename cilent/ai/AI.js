@@ -207,25 +207,3 @@ class AI {
         return grid;
     }
 }
-
-var ai = new AI(15);
-
-process.stdin.resume();
-process.stdin.setEncoding('utf8');
-var fullInput = "";
-process.stdin.on('data', function(chunk) {
-    fullInput += chunk;
-});
-process.stdin.on('end', function() { 
-    var input = JSON.parse(fullInput);
-    for (var i = input.requests.length - 1; i >= 0; i--) {
-        ai.placeAt({x: input.requests[i].x, y: input.requests[i].y}, chessColor.white);
-    }
-    for (var i = input.responses.length - 1; i >= 0; i--) {
-        ai.placeAt({x: input.responses[i].x, y: input.responses[i].y}, chessColor.black);
-    }
-    var output = {
-        response: ai.thinkDeeply(6, chessColor.black)
-    };
-    console.log(JSON.stringify(output));
-});
