@@ -41,14 +41,15 @@ class AI {
                 }
             }
         }
-        list.sort(function(a, b) {
-            return b.v - a.v;
-        });
-        var result = [];
-        for (var i = 0; i < bestK; ++ i) {
-            result.push(list[i]);
-        }
-        return result;
+        // list.sort(function(a, b) {
+        //     return b.v - a.v;
+        // });
+        // var result = [];
+        // for (var i = 0; i < bestK; ++ i) {
+        //     result.push(list[i]);
+        // }
+        // return result;
+        return list;
     }
 
     /* 评估本次落子得分 */

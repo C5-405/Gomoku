@@ -18,15 +18,15 @@ var black = new Image();
 var white = new Image();
 black.src = "black.png";
 white.src = "white.png";
+var ai = new AI(15);
+
 $(document).ready(function () {
     init();
-    var ai = new AI(15);
     $("#can").click(function (e) {
         // 初始化图片 
       
         var col = parseInt((e.clientX) / 35);
         var row = parseInt((e.clientY) / 35);
-
         //下棋画子
         function xia() {
             if (isWin) {
@@ -38,13 +38,12 @@ $(document).ready(function () {
                     ctx.drawImage(black, col * 35 - 17.5, row * 35 - 17.5);
                     ai.placeAt({x: row, y: col}, chessColor.black);
                     isWin = ai.evaluate({x: row, y: col}, chessColor.black) >= 1000000;
-                    if (isWin) alert('黑棋胜')
+                    if (isWin) alert('黑棋胜');
                     isBlack = false;
-                }
-                else {
-                    ctx.drawImage(white, col * 35 - 17.5, row * 35 - 17.5);
-                    ai.placeAt({x: row, y: col}, chessColor.white);
-                    isWin = ai.evaluate({x: row, y: col}, chessColor.white) >= 1000000;
+                    var position = ai.thinkDeeply(2, chessColor.white);
+                    ctx.drawImage(white, position.y * 35 - 17.5, position.x * 35 - 17.5);
+                    ai.placeAt(position, chessColor.white);
+                    isWin = ai.evaluate(position, chessColor.white) >= 1000000;
                     if (isWin) alert('白棋胜');
                     isBlack = true;
                 }
